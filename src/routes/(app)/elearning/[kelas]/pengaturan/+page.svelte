@@ -34,7 +34,7 @@
     };
 </script>
 
-<div class="p-4 grid place-items-center gap-4">
+<div class="p-4 grid place-items-center">
     {#if data.error || !data.classroomData || Object.values(data.classroomData).some(v => v === null)}
         <div class="w-full h-full col-span-4 grid place-items-center">
             <Card.Root class="w-fit border-red-500">
@@ -48,7 +48,7 @@
             </Card.Root>
         </div>
     {:else if data.form}
-        <div class="w-1/3">
+        <div class="w-1/3 grid gap-4">
             <Card.Root>
                 <Card.Header>
                     <Card.Title class="text-lg">Detail Ruang Kelas</Card.Title>
