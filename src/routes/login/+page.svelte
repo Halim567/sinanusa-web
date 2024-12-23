@@ -8,12 +8,18 @@
     import type { PageData } from './$types';
     import { superForm } from 'sveltekit-superforms';
     import { Background, Logo } from '$lib/images';
+    import Loading from '$lib/components/ui/loading/loading.svelte';
 
     const { data }: { data: PageData } = $props();
 
-    const form = superForm(data.form, { validators: valibotClient(loginSchema) });
+    const form = superForm(data.form, { 
+        validators: valibotClient(loginSchema),
+        onUpdate({ form }) {
+            console.log(form.message);
+        }
+    });
 
-    const { form: formData, enhance } = form;
+    const { form: formData, enhance, message, delayed } = form;
 </script>
 
 <div class="w-full h-screen grid place-items-center bg-cover bg-center" style="background-image: url({Background});">
@@ -32,7 +38,7 @@
                     <Form.Field {form} name="nomorInduk">
                         <Form.Control>
                             {#snippet children({ props })}
-                                <Form.Label>Username</Form.Label>
+                                <Form.Label>Nomor Induk</Form.Label>
                                 <Input {...props} bind:value={$formData.nomorInduk} />
                             {/snippet}
                         </Form.Control>
@@ -47,7 +53,12 @@
                         </Form.Control>
                         <Form.FieldErrors />
                     </Form.Field>
-                    <Form.Button>Login</Form.Button>
+                    <div class="grid gap-2">
+                        {#if $message && !$message.success}<span class="text-red-500">{ $message.text }</span>{/if}
+                        <Form.Button class="w-full">
+                            {#if $delayed}<Loading/>{:else}Login{/if}
+                        </Form.Button>
+                    </div>
                 </form>
             </Card.Content>
         </Card.Root>

@@ -1,9 +1,9 @@
 import { env } from "$env/dynamic/private";
 import { catchReject } from "$lib";
-import type { RequestEvent } from "@sveltejs/kit";
+import type { Cookies } from "@sveltejs/kit";
 import { jwtVerify, SignJWT, type JWTPayload } from "jose";
 
-export const createJwtSession = async (request: RequestEvent, { id, nama, role }: User) => {
+export const createJwtSession = async (cookies: Cookies, { id, nama, role }: User) => {
     const token = await new SignJWT({ id, nama, role })
         .setProtectedHeader({ alg: "HS512"})
         .setIssuedAt()
@@ -11,7 +11,7 @@ export const createJwtSession = async (request: RequestEvent, { id, nama, role }
         .setProtectedHeader({ alg: "HS512"})
         .sign(new TextEncoder().encode(env.AUTH_SECRET));
 
-    request.cookies.set("_sinanusa.session.token", token, {
+    cookies.set("_sinanusa.session.token", token, {
         httpOnly: true,
         sameSite: "lax",
         path: "/",

@@ -9,6 +9,13 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}
+
+        namespace Superforms {
+            type Message = {
+                success: boolean;
+                text: string;
+            }
+        }
 	}
 
     interface User {
