@@ -55,7 +55,7 @@
                     </Form.Field>
                     <div class="grid gap-2">
                         {#if $message && !$message.success}<span class="text-red-500">{ $message.text }</span>{/if}
-                        <Form.Button class="w-full">
+                        <Form.Button class="w-full" disabled={$delayed}>
                             {#if $delayed}<Loading/>{:else}Login{/if}
                         </Form.Button>
                     </div>

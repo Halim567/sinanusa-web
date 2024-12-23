@@ -75,5 +75,57 @@ export const actions: Actions = {
         }
 
         return message(form, { success: true, text: "Kelas berhasil dibuat" });
+    },
+    ['update-classroom']: async ({ request, locals, url }) => {
+        if (!locals.user) throw redirect(303, '/login');
+        
+        const form = await superValidate(request, valibot(classroomSchema));
+        const classroomId = parseInt(url.searchParams.get("id") ?? "");
+        if (isNaN(classroomId)) return message(form, { success: false, text: "Gagal mengubah kelas, id kelas tidak valid" }, { status: 400 });
+
+        if (locals.user.role !== "Guru") 
+            return message(form, { success: false, text: "Gagal mengubah kelas, anda tidak memiliki akses untuk mengubah kelas" }, { status: 403 });
+
+        if (!form.valid) return fail(422, { form });
+
+        const [result, error] = await catchReject(async () => {
+            return await db
+                .update(tbClassroom)
+                .set({
+                    namaKelas: form.data.namaKelas,
+                    mataPelajaran: form.data.mataPelajaran,
+                    kelas: form.data.kelas
+                })
+                .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)))
+                .returning({ id: tbClassroom.id });
+        });
+
+        if (error != null || result.length === 0) {
+            console.error(error);
+            return message(form, { success: false, text: "Gagal mengubah kelas" }, { status: 500 });
+        }
+
+        return message(form, { success: true, text: "Kelas berhasil diubah" });
+    },
+    ['delete-classroom']: async ({ locals, url }) => {
+        if (!locals.user) throw redirect(303, '/login');
+
+        const classroomId = parseInt(url.searchParams.get("id") ?? "");
+        if (isNaN(classroomId)) return fail(400, { success: false, error: "Gagal menghapus kelas, id kelas tidak valid" });
+
+        const [result, error] = await catchReject(async () => {
+            return await db
+                .update(tbClassroom)
+                .set({ deleted: true })
+                .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)))
+                .returning({ id: tbClassroom.id });
+        });
+
+        if (error !== null || result.length === 0) {
+            console.error("Error: ", error);
+            return fail(500, { success: false, error: "Gagal menghapus kelas" });
+        }
+
+        throw redirect(303, '/elearning');
     }
 };
