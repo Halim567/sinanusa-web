@@ -105,7 +105,7 @@ export const actions: Actions = {
             return message(form, { success: false, text: "Gagal mengubah kelas" }, { status: 500 });
         }
 
-        return message(form, { success: true, text: "Kelas berhasil diubah" });
+        throw redirect(303, '/elearning');
     },
     ['delete-classroom']: async ({ locals, url }) => {
         if (!locals.user) throw redirect(303, '/login');
