@@ -7,36 +7,32 @@
     import { valibotClient } from 'sveltekit-superforms/adapters';
     import { superForm, type SuperValidated, type Infer } from 'sveltekit-superforms';
     import Loading from '../ui/loading/loading.svelte';
-    import type { ActionResult } from '@sveltejs/kit';
     
-    const { data, action, onSubmit }: { 
+    const { data, action, onSuccess, onRedirect }: { 
         data: SuperValidated<Infer<typeof classroomSchema>>, 
         action: string,
-        onSubmit?: (event: {
-            form: SuperValidated<{
-                namaKelas: string;
-                kelas: "7A" | "7B" | "8A" | "8B" | "9A" | "9B";
-                mataPelajaran: "IPA" | "IPS" | "Matematika" | "Bahasa Indonesia" | "Bahasa Inggris" | "Pendidikan Agama Islam" | "Pendidikan Kewarganegaraan" | "Pendidikan Jasmani" | "Seni Budaya" | "Prakarya";
-            }, App.Superforms.Message, {
-                namaKelas: string;
-                kelas: "7A" | "7B" | "8A" | "8B" | "9A" | "9B";
-                mataPelajaran: "IPA" | "IPS" | "Matematika" | "Bahasa Indonesia" | "Bahasa Inggris" | "Pendidikan Agama Islam" | "Pendidikan Kewarganegaraan" | "Pendidikan Jasmani" | "Seni Budaya" | "Prakarya";
-            }>;
-            formEl: HTMLFormElement;
-            formElement: HTMLFormElement;
-            cancel: () => void;
-            result: Required<Extract<ActionResult, { type: "success" | "failure" }>>;
-        }) => void
+        onSuccess?: () => void,
+        onRedirect?: () => void
     } = $props();
     
     let isChanged = $state(false);
     
     const form = superForm(data, { 
         validators: valibotClient(classroomSchema),
-        onUpdate(event) { if (onSubmit) onSubmit(event); },
+        onUpdated({ form: { message } }) { 
+            if (onSuccess && message && message.success) {
+                isChanged = false;
+                onSuccess(); 
+            }
+        },
         onChange: () => isChanged = true,
+        onResult: ev => {
+            if (ev.result.type === "redirect") {
+                isChanged = false;
+                if (onRedirect) onRedirect();
+            }
+        }
     });
-
 
     const { form: formData, enhance, message, delayed } = form;
 </script>

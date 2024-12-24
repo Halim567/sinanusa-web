@@ -56,12 +56,8 @@
                 <Card.Content>
                     <ClassroomForm 
                         data={data.form} 
-                        action="/elearning?/update-classroom&id={data.classroomData.classroom_id}"
-                        onSubmit={({ form }) => {
-                            if (form.message && form.message.success) {
-                                toast.success('Kelas berhasil diperbarui');
-                            }
-                        }}
+                        action="/elearning?/update-classroom&id={data.classroomData.classroom_id}&url={data.pathname}"
+                        onRedirect={() => toast.success('Kelas berhasil diperbarui')}
                     />
                 </Card.Content>
             </Card.Root>

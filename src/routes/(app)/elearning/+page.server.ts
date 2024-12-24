@@ -43,7 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
         return { error: "Gagal mengambil data kelas" };
     }
 
-    return { classroomData: result, userRole: user.role };
+    return { classroomData: result };
 };
 
 export const actions: Actions = {
@@ -78,7 +78,7 @@ export const actions: Actions = {
     },
     ['update-classroom']: async ({ request, locals, url }) => {
         if (!locals.user) throw redirect(303, '/login');
-        
+
         const form = await superValidate(request, valibot(classroomSchema));
         const classroomId = parseInt(url.searchParams.get("id") ?? "");
         if (isNaN(classroomId)) return message(form, { success: false, text: "Gagal mengubah kelas, id kelas tidak valid" }, { status: 400 });
@@ -97,7 +97,10 @@ export const actions: Actions = {
                     kelas: form.data.kelas
                 })
                 .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)))
-                .returning({ id: tbClassroom.id });
+                .returning({ 
+                    id: tbClassroom.id,
+                    namaKelas: tbClassroom.namaKelas 
+                });
         });
 
         if (error != null || result.length === 0) {
@@ -105,7 +108,8 @@ export const actions: Actions = {
             return message(form, { success: false, text: "Gagal mengubah kelas" }, { status: 500 });
         }
 
-        throw redirect(303, '/elearning');
+        // return message(form, { success: true, text: "berhasil mengupdate data" })
+        throw redirect(303, `/elearning/${result[0].namaKelas}/pengaturan?id=${result[0].id}`);
     },
     ['delete-classroom']: async ({ locals, url }) => {
         if (!locals.user) throw redirect(303, '/login');

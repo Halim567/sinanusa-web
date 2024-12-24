@@ -52,13 +52,11 @@
                                     Masukan nama ruang kelas, pilih kelas, dan mata pelajaran yang akan diajarkan.
                                 </Dialog.Description>
                             </Dialog.Header>
-                            <ClassroomForm data={data.form} action="/elearning?/create-classroom" onSubmit={event => { 
-                                if (event.form.message && event.form.message.success) {
-                                    openDialog = false;
-                                    toast.success("Kelas berhasil dibuat", {
-                                        description: "Anda dapat menshare kode kelas kepada siswa anda untuk bergabung.",
-                                    });
-                                } 
+                            <ClassroomForm data={data.form} action="/elearning?/create-classroom" onSuccess={() => { 
+                                openDialog = false;
+                                toast.success("Kelas berhasil dibuat", {
+                                    description: "Anda dapat menshare kode kelas kepada siswa anda untuk bergabung.",
+                                });
                             }}/>
                         </Dialog.Content>
                     </Dialog.Root>

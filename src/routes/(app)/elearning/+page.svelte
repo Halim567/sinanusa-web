@@ -47,7 +47,7 @@
                     </Card.Root>
                 </a>
             {:else}
-                {#if data.userRole === "Guru"}
+                {#if data.user?.role === "Guru"}
                     <div class="w-full h-full col-span-4 grid place-items-center">
                         <Card.Root class="w-fit">
                             <Card.Header class="p-4">
@@ -65,7 +65,7 @@
                             </Card.Header>
                         </Card.Root>
                     </div>
-                {:else if data.userRole === "Siswa"}
+                {:else if data.user?.role === "Siswa"}
                     <div class="w-full h-full col-span-4 grid place-items-center">
                         <Card.Root class="w-fit">
                             <Card.Header class="p-4">
