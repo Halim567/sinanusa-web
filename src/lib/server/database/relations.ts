@@ -1,5 +1,18 @@
 import { relations } from "drizzle-orm/relations";
-import { tbAccount, tbGuru, tbAdmin, tbSiswa, tbClassroom, tbAssignment, tbSubmission, tbSession, tbClassroomSiswa } from "./schema";
+import { tbAccount, tbAdmin, tbGuru, tbSiswa, tbClassroom, tbAssignment, tbSubmission, tbClassroomSiswa } from "./schema";
+
+export const tbAdminRelations = relations(tbAdmin, ({one}) => ({
+	tbAccount: one(tbAccount, {
+		fields: [tbAdmin.accountId],
+		references: [tbAccount.id]
+	}),
+}));
+
+export const tbAccountRelations = relations(tbAccount, ({many}) => ({
+	tbAdmins: many(tbAdmin),
+	tbGurus: many(tbGuru),
+	tbSiswas: many(tbSiswa),
+}));
 
 export const tbGuruRelations = relations(tbGuru, ({one, many}) => ({
 	tbAccount: one(tbAccount, {
@@ -7,20 +20,6 @@ export const tbGuruRelations = relations(tbGuru, ({one, many}) => ({
 		references: [tbAccount.id]
 	}),
 	tbClassrooms: many(tbClassroom),
-}));
-
-export const tbAccountRelations = relations(tbAccount, ({many}) => ({
-	tbGurus: many(tbGuru),
-	tbAdmins: many(tbAdmin),
-	tbSiswas: many(tbSiswa),
-	tbSessions: many(tbSession),
-}));
-
-export const tbAdminRelations = relations(tbAdmin, ({one}) => ({
-	tbAccount: one(tbAccount, {
-		fields: [tbAdmin.accountId],
-		references: [tbAccount.id]
-	}),
 }));
 
 export const tbSiswaRelations = relations(tbSiswa, ({one, many}) => ({
@@ -62,13 +61,6 @@ export const tbSubmissionRelations = relations(tbSubmission, ({one}) => ({
 	tbSiswa: one(tbSiswa, {
 		fields: [tbSubmission.siswaId],
 		references: [tbSiswa.id]
-	}),
-}));
-
-export const tbSessionRelations = relations(tbSession, ({one}) => ({
-	tbAccount: one(tbAccount, {
-		fields: [tbSession.accountId],
-		references: [tbAccount.id]
 	}),
 }));
 

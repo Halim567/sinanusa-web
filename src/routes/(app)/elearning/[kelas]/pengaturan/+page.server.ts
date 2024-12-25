@@ -9,7 +9,19 @@ import { redirect } from '@sveltejs/kit';
 export const load: PageServerLoad = async ({ url, locals }) => {
     if (!locals.user) throw redirect(303, "/login");
     
-    const classroomId = parseInt(url.searchParams.get('id')!);
+    const idQuery = url.searchParams.get('id');
+
+    if (idQuery === null) {
+        console.error("Id query not found");
+        return { error: true };
+    }
+
+    const classroomId = parseInt(idQuery);
+
+    if (isNaN(classroomId)) {
+        console.error("Invalid id query");
+        return { error: true };
+    }
 
     const [result, error] = await catchReject(async () => {
         return await db.select({

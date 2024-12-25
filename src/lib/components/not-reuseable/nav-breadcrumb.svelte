@@ -9,7 +9,7 @@
     $effect(() => {
         const pathnames = page.url.pathname.split('/').filter(Boolean);
         breadcrumbs = pathnames.map((name, index) => ({
-            href: `/${pathnames.slice(0, index + 1).join("/")}${window.location.search}`,
+            href: `/${pathnames.slice(0, index + 1).join("/")}?id=${page.url.searchParams.get("id")}`,
             name: toSentenceCase(decodeURIComponent(name))
         }));
     });

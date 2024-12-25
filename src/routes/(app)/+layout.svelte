@@ -6,7 +6,7 @@
     import { Separator } from '$lib/components/ui/separator';
     import * as Dialog from '$lib/components/ui/dialog';
     import * as Popover from '$lib/components/ui/popover';
-    import ClassroomForm from '$lib/components/not-reuseable/classroom-form.svelte';
+    import FormClassroom from '$lib/components/not-reuseable/form-classroom.svelte';
     
     import { toast } from 'svelte-sonner';
     import type { Snippet } from 'svelte';
@@ -17,6 +17,7 @@
     let isscroll = $state(false);
     let openDialog = $state(false);
     let elearningpath = $state("");
+    let open = $state(false);
 
     $effect(() => {
         const handle = () => isscroll = window.scrollY > 0;
@@ -52,7 +53,7 @@
                                     Masukan nama ruang kelas, pilih kelas, dan mata pelajaran yang akan diajarkan.
                                 </Dialog.Description>
                             </Dialog.Header>
-                            <ClassroomForm data={data.form} action="/elearning?/create-classroom" onSuccess={() => { 
+                            <FormClassroom data={data.form} action="/elearning?/create-classroom" onSuccess={() => { 
                                 openDialog = false;
                                 toast.success("Kelas berhasil dibuat", {
                                     description: "Anda dapat menshare kode kelas kepada siswa anda untuk bergabung.",
@@ -83,17 +84,17 @@
                 <Button variant="ghost" href="{elearningpath}/pengaturan?id={data.params}" class="flex flex-col lg:flex-row gap-3 [&_svg]:size-5 w-32">
                     <Settings /> <small>Pengaturan</small>
                 </Button>
-                <Popover.Root>
+                <Popover.Root {open} onOpenChange={e => open = e}>
                     <Popover.Trigger>
                         <Button variant="ghost" class="flex flex-col lg:flex-row gap-3 [&_svg]:size-5 w-32">
                             <Plus /> <small>Buat</small>
                         </Button>
                     </Popover.Trigger>
                     <Popover.Content class="w-fit p-1 grid gap-2">
-                        <Button variant="ghost" href="{elearningpath}/buat?id={data.params}&tipe=Tugas" class="flex flex-col lg:flex-row gap-3 justify-start [&_svg]:size-5 w-32">
+                        <Button onclick={() => open = false} variant="ghost" href="{elearningpath}/buat?id={data.params}&tipe=Tugas" class="flex flex-col lg:flex-row gap-3 justify-start [&_svg]:size-5 w-32">
                             <ClipboardList /> <small>Tugas</small>
                         </Button>
-                        <Button variant="ghost" href="{elearningpath}/buat?id={data.params}&tipe=Materi" class="flex flex-col lg:flex-row gap-3 justify-start [&_svg]:size-5 w-32">
+                        <Button onclick={() => open = false} variant="ghost" href="{elearningpath}/buat?id={data.params}&tipe=Materi" class="flex flex-col lg:flex-row gap-3 justify-start [&_svg]:size-5 w-32">
                             <BookMarked /> <small>Materi</small>
                         </Button>
                     </Popover.Content>

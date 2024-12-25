@@ -69,10 +69,6 @@ export const penugasanSchema = v.object({
         v.string(),
         v.nonEmpty("Nama Penugasan tidak boleh kosong"),
     ),
-    tipePenugasan: v.picklist(
-        ["Tugas", "Materi", "Ujian"],
-        "Tipe penugasan tidak tersedia",
-    ),
     batasPengumpulan: v.optional(
         v.pipe(
             v.string(),
@@ -80,7 +76,7 @@ export const penugasanSchema = v.object({
             v.minValue(new Date().toISOString(), "Deadline tidak boleh kurang dari hari ini"),
         ),
     ),
-    files: v.optional(v.union([v.array(fileUpload), fileUpload])),
+    files: v.optional(v.pipe(v.array(fileUpload), v.maxLength(3, "Anda hanya bisa mengupload maksimal 3 file"))),
     deskripsi: v.optional(v.string())
 });
 

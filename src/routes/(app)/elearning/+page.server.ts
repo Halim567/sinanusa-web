@@ -108,7 +108,6 @@ export const actions: Actions = {
             return message(form, { success: false, text: "Gagal mengubah kelas" }, { status: 500 });
         }
 
-        // return message(form, { success: true, text: "berhasil mengupdate data" })
         throw redirect(303, `/elearning/${result[0].namaKelas}/pengaturan?id=${result[0].id}`);
     },
     ['delete-classroom']: async ({ locals, url }) => {

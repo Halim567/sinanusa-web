@@ -1,7 +1,7 @@
 <script lang="ts">
     import * as Card from '$lib/components/ui/card';
     import * as Dialog from '$lib/components/ui/dialog';
-    import ClassroomForm from '$lib/components/not-reuseable/classroom-form.svelte';
+    import FormClassroom from '$lib/components/not-reuseable/form-classroom.svelte';
     import { Button } from '$lib/components/ui/button';
     import { toast } from 'svelte-sonner';
     import * as AlertDialog from '$lib/components/ui/alert-dialog';
@@ -54,7 +54,7 @@
                     <Card.Title class="text-lg">Detail Ruang Kelas</Card.Title>
                 </Card.Header>
                 <Card.Content>
-                    <ClassroomForm 
+                    <FormClassroom 
                         data={data.form} 
                         action="/elearning?/update-classroom&id={data.classroomData.classroom_id}&url={data.pathname}"
                         onRedirect={() => toast.success('Kelas berhasil diperbarui')}

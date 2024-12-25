@@ -1,6 +1,6 @@
-import { pgTable, unique, bigint, text, boolean, timestamp, foreignKey, date, integer, primaryKey, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, unique, bigint, text, boolean, timestamp, foreignKey, date, primaryKey, pgEnum, jsonb } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
-import { role, jenisKelamin, agama, tipeAssignment } from "./enums";
+import { role, jenisKelamin, agama, tipePenugasan } from "./enums";
 
 export const tbAccount = pgTable("tb_account", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -9,46 +9,21 @@ export const tbAccount = pgTable("tb_account", {
 	password: text().notNull(),
 	role: role().notNull(),
 	aktif: boolean().default(true).notNull(),
-	login: boolean().default(false).notNull(),
-	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
-	diubahPada: timestamp("diubah_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
 }, (table) => [
 	unique("tb_account_nomor_induk_key").on(table.nomorInduk),
 ]);
 
-export const tbGuru = pgTable("tb_guru", {
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_guru_guru_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
-	nama: text().notNull(),
-	nuptk: text().notNull(),
-	jenisKelamin: jenisKelamin("jenis_kelamin").notNull(),
-	tempatLahir: text("tempat_lahir").notNull(),
-	tanggalLahir: date("tanggal_lahir").notNull(),
-	email: text().notNull(),
-	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
-	diubahPada: timestamp("diubah_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	accountId: bigint("account_id", { mode: "number" }).notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.accountId],
-			foreignColumns: [tbAccount.id],
-			name: "tb_guru_account_id_fkey"
-		}).onDelete("cascade"),
-	unique("tb_guru_email_key").on(table.email),
-	unique("tb_guru_account_id_key").on(table.accountId),
-]);
-
 export const tbAdmin = pgTable("tb_admin", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_admin_admin_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_admin_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	accountId: bigint("account_id", { mode: "number" }).notNull(),
 	nama: text().notNull(),
 	jenisKelamin: jenisKelamin("jenis_kelamin").notNull(),
 	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
 	diubahPada: timestamp("diubah_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	accountId: bigint("account_id", { mode: "number" }).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.accountId],
@@ -58,9 +33,34 @@ export const tbAdmin = pgTable("tb_admin", {
 	unique("tb_admin_account_id_key").on(table.accountId),
 ]);
 
+export const tbGuru = pgTable("tb_guru", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_guru_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	accountId: bigint("account_id", { mode: "number" }).notNull(),
+	nama: text().notNull(),
+	nuptk: text().notNull(),
+	jenisKelamin: jenisKelamin("jenis_kelamin").notNull(),
+	tempatLahir: text("tempat_lahir").notNull(),
+	tanggalLahir: date("tanggal_lahir").notNull(),
+	email: text().notNull(),
+	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
+	diubahPada: timestamp("diubah_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
+}, (table) => [
+	foreignKey({
+			columns: [table.accountId],
+			foreignColumns: [tbAccount.id],
+			name: "tb_guru_account_id_fkey"
+		}).onUpdate("cascade").onDelete("cascade"),
+	unique("tb_guru_account_id_key").on(table.accountId),
+	unique("tb_guru_email_key").on(table.email),
+]);
+
 export const tbSiswa = pgTable("tb_siswa", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_siswa_siswa_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_siswa_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	accountId: bigint("account_id", { mode: "number" }),
 	nama: text().notNull(),
 	nipd: text().notNull(),
 	jenisKelamin: jenisKelamin("jenis_kelamin").notNull(),
@@ -72,8 +72,6 @@ export const tbSiswa = pgTable("tb_siswa", {
 	kelas: text().notNull(),
 	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
 	diubahPada: timestamp("diubah_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	accountId: bigint("account_id", { mode: "number" }).notNull(),
 }, (table) => [
 	foreignKey({
 			columns: [table.accountId],
@@ -83,12 +81,11 @@ export const tbSiswa = pgTable("tb_siswa", {
 	unique("tb_siswa_nipd_key").on(table.nipd),
 	unique("tb_siswa_nisn_key").on(table.nisn),
 	unique("tb_siswa_nik_key").on(table.nik),
-	unique("tb_siswa_account_id_key").on(table.accountId),
 ]);
 
 export const tbClassroom = pgTable("tb_classroom", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_classroom_classroom_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_classroom_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	kode: text().notNull(),
 	namaKelas: text("nama_kelas").notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
@@ -109,15 +106,15 @@ export const tbClassroom = pgTable("tb_classroom", {
 
 export const tbAssignment = pgTable("tb_assignment", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_assignment_assignment_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_assignment_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	classroomId: bigint("classroom_id", { mode: "number" }).notNull(),
 	judul: text().notNull(),
 	deskripsi: text(),
 	batasPengumpulan: timestamp("batas_pengumpulan", { withTimezone: true, mode: 'string' }),
 	deleted: boolean().default(false).notNull(),
-	file: text().array(),
-	tipeAssignment: tipeAssignment("tipe_assignment").notNull(),
+    fileDatas: jsonb("file_datas").$type<{ url: string, name: string }>().array(),
+	tipeAssignment: tipePenugasan("tipe_assignment").notNull(),
 	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
 	diubahPada: timestamp("diubah_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
 }, (table) => [
@@ -130,12 +127,12 @@ export const tbAssignment = pgTable("tb_assignment", {
 
 export const tbSubmission = pgTable("tb_submission", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_submission_submission_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
+	id: bigint({ mode: "number" }).primaryKey().generatedByDefaultAsIdentity({ name: "tb_submission_id_seq", startWith: 1, increment: 1, minValue: 1, maxValue: 9223372036854775807, cache: 1 }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	classroomId: bigint("classroom_id", { mode: "number" }).notNull(),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	siswaId: bigint("siswa_id", { mode: "number" }).notNull(),
-	file: text().array().notNull(),
+	fileUrls: text("file_urls").array().notNull(),
 	terlambat: boolean().default(false).notNull(),
 	selesai: boolean().default(false).notNull(),
 	deleted: boolean().default(false).notNull(),
@@ -159,21 +156,6 @@ export const tbSubmission = pgTable("tb_submission", {
 			foreignColumns: [tbSiswa.id],
 			name: "tb_submission_siswa_id_fkey"
 		}).onUpdate("cascade").onDelete("cascade"),
-]);
-
-export const tbSession = pgTable("tb_session", {
-	accountId: integer("account_id").notNull(),
-	sessionToken: text("session_token").notNull(),
-	dibuatPada: timestamp("dibuat_pada", { withTimezone: true, mode: 'string' }).default(sql`(now() AT TIME ZONE 'utc'::text)`).notNull(),
-	kadaluarsaPada: timestamp("kadaluarsa_pada", { mode: 'string' }).notNull(),
-	id: text().primaryKey().notNull(),
-}, (table) => [
-	foreignKey({
-			columns: [table.accountId],
-			foreignColumns: [tbAccount.id],
-			name: "tb_session_account_id_fkey"
-		}).onDelete("cascade"),
-	unique("tb_session_session_token_key").on(table.sessionToken),
 ]);
 
 export const tbClassroomSiswa = pgTable("tb_classroom_siswa", {
