@@ -4,26 +4,15 @@
 
     import type { PageData } from './$types';
     import { formatInTimeZone } from "date-fns-tz";
-    import { AlertCircle, File, Upload } from "lucide-svelte";
+    import { File, Upload } from "lucide-svelte";
     import { Button } from "$lib/components/ui/button";
+    import ErrorCard from "$lib/components/not-reuseable/error-card.svelte";
 
     let { data }: { data: PageData } = $props();
 </script>
 
 <div class="grid gap-4 place-items-center p-4">
-    {#if data.error !== undefined}
-        <div class="w-full h-full col-span-4 grid place-items-center">
-            <Card.Root class="w-fit border-red-500">
-                <Card.Header class="p-4">
-                    <Card.Title class="text-lg flex items-center gap-2 text-red-500">
-                        <AlertCircle/>
-                        Terdapat Kesalahan
-                    </Card.Title>
-                    <Card.Description>Terdapat kesalahan yang tidak terduga. Gagal mengambil data kelas, silakan coba lagi nanti</Card.Description>
-                </Card.Header>
-            </Card.Root>
-        </div>
-    {:else}
+    {#if data.penugasan !== undefined}
         {#each data.penugasan as penugasan}
             <Card.Root class="w-[64rem] max-w-[64rem]">
                 <Card.Header>
@@ -79,7 +68,7 @@
                                     {/each}
                                 </div>
                             {/if}
-                            {#if (penugasan.tipePenugasan === "Tugas" || penugasan.tipePenugasan === "Ujian") && !penugasan.submissionSelesai}
+                            {#if (penugasan.tipePenugasan === "Tugas" || penugasan.tipePenugasan === "Ujian") && !penugasan.submissionSelesai && data.user.role === "Siswa"}
                                 <Button
                                     variant="outline"
                                     class="border-blue-500 border-2 [&_svg]:size-5"
@@ -116,5 +105,7 @@
                 </Card.Root>
             </div>
         {/each}
+    {:else}
+        <ErrorCard/>
     {/if}
 </div>

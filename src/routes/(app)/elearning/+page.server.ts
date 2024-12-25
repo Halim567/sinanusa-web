@@ -1,11 +1,12 @@
 import { catchReject } from '$lib';
 import { classroomSchema } from '$lib/schema';
-import { and, count, db, desc, eq, sql, tbClassroom, tbClassroomSiswa, tbGuru, tbSiswa } from '$lib/server/database';
+import { and, count, db, desc, eq, sql, tbAssignment, tbClassroom, tbClassroomSiswa, tbGuru, tbSiswa } from '$lib/server/database';
 import { redirect, type Actions } from '@sveltejs/kit';
 import { fail, message, superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import crypto from "crypto";
 import type { PageServerLoad } from './$types';
+import { utapi } from '$lib/server/uploadthing';
 
 export const load: PageServerLoad = async ({ locals }) => {
     if (!locals.user) throw redirect(303, '/login');
@@ -118,10 +119,14 @@ export const actions: Actions = {
 
         const [result, error] = await catchReject(async () => {
             return await db
-                .update(tbClassroom)
-                .set({ deleted: true })
-                .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)))
-                .returning({ id: tbClassroom.id });
+                .select({
+                    id: tbClassroom.id,
+                    guruId: tbClassroom.guruId,
+                    fileDatas: tbAssignment.fileDatas
+                })
+                .from(tbClassroom)
+                .leftJoin(tbAssignment, eq(tbClassroom.id, tbAssignment.classroomId))
+                .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)));
         });
 
         if (error !== null || result.length === 0) {
@@ -129,6 +134,34 @@ export const actions: Actions = {
             return fail(500, { success: false, error: "Gagal menghapus kelas" });
         }
 
+        const { id, guruId, fileDatas } = result[0];
+        if (fileDatas !== null) {
+            for (const file of fileDatas as { url: string; name: string, key: string }[]) {
+                const result = await utapi.deleteFiles(file.key);
+
+                if (!result.success) {
+                    console.error("[DELETE CLASSROOM] Gagal menghapus file");
+                    return fail(500, { success: false, error: "Gagal menghapus kelas" });
+                }
+            }
+        }
+
+        const [result1, error1] = await catchReject(async () => {
+            return await db
+                .delete(tbClassroom)
+                .where(and(eq(tbClassroom.id, id), eq(tbClassroom.guruId, guruId)))
+                .returning({ id: tbClassroom.id });
+        });
+
+        if (error1 !== null || result1.length === 0) {
+            console.error("Error: ", error);
+            return fail(500, { success: false, error: "Gagal menghapus kelas" });
+        }
+
         throw redirect(303, '/elearning');
     }
 };
+
+// http://localhost:5173/elearning/test?id=28
+// http://localhost:5173/elearning/test/buat?id=28&tipe=Tugas
+// http://localhost:5173/elearning/test/pengaturan?id=28

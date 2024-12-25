@@ -5,6 +5,7 @@ import type { PageServerLoad } from './$types';
 import { catchReject } from '$lib';
 import { and, count, db, eq, tbClassroom, tbClassroomSiswa, tbGuru, tbSiswa } from '$lib/server/database';
 import { redirect } from '@sveltejs/kit';
+import { getClassroomById } from '$lib/server/database/fetch';
 
 export const load: PageServerLoad = async ({ url, locals }) => {
     if (!locals.user) throw redirect(303, "/login");
@@ -23,7 +24,18 @@ export const load: PageServerLoad = async ({ url, locals }) => {
         return { error: true };
     }
 
-    const [result, error] = await catchReject(async () => {
+    const [result, error] = await catchReject(async () => await getClassroomById(classroomId));
+
+    if (error !== null) {
+        console.error(error);
+        return { error: true };
+    }
+
+    if (result.length === 0) {
+        return { errorNotFound: true };
+    }
+
+    const [result1, error1] = await catchReject(async () => {
         return await db.select({
                 classroom_id: tbClassroom.id,
                 nama_pengajar: tbGuru.nama,
@@ -43,12 +55,12 @@ export const load: PageServerLoad = async ({ url, locals }) => {
             .groupBy(tbClassroom.id, tbGuru.nama, tbClassroom.namaKelas, tbClassroom.kode);
     });
 
-    if (error !== null || result.length === 0) {
-        console.error(error);
+    if (error1 !== null || result1.length === 0) {
+        console.error(error1);
         return { error: true };
     }
 
-    const classroomData = result[0];
+    const classroomData = result1[0];
 
     return {
         classroomData,

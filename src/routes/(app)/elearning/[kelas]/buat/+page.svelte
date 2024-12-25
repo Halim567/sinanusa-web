@@ -4,12 +4,14 @@
     import { toast } from "svelte-sonner";
 
     import type { PageData } from './$types';
+    import { AlertCircle } from "lucide-svelte";
+    import ErrorCard from "$lib/components/not-reuseable/error-card.svelte";
 
     let { data }: { data: PageData } = $props();
 </script>
 
 <div class="p-4 grid place-items-center gap-4">
-    {#if data.error === undefined}
+    {#if data.tipePenugasan !== undefined}
         <Card.Root class="w-1/3">
             <Card.Header>
                 <Card.Title class="text-lg">Buat {data.tipePenugasan}</Card.Title>
@@ -30,5 +32,7 @@
                 />
             </Card.Content>
         </Card.Root>
+    {:else}
+        <ErrorCard/>
     {/if}
 </div>

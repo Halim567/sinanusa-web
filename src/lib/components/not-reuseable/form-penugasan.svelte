@@ -1,15 +1,15 @@
 <script lang="ts">
     import * as Form from '../ui/form';
     import { Input } from '../ui/input';
+    import { FileIcon, Upload, X } from 'lucide-svelte';
+    import { Textarea } from '../ui/textarea';
+    import { Button } from '../ui/button';
+    import Loading from '../ui/loading/loading.svelte';
+    import { toast } from 'svelte-sonner';
 
     import { valibotClient } from 'sveltekit-superforms/adapters';
     import { superForm, type SuperValidated, type Infer } from 'sveltekit-superforms';
-    import Loading from '../ui/loading/loading.svelte';
     import { penugasanSchema } from '$lib/schema';
-    import { Textarea } from '../ui/textarea';
-    import { FileIcon, Upload, X } from 'lucide-svelte';
-    import { toast } from 'svelte-sonner';
-    import { Button } from '../ui/button';
 
     const { data, action, onSuccess, onRedirect, tipePenugasan }: { 
         data: SuperValidated<Infer<typeof penugasanSchema>>, 
@@ -40,6 +40,8 @@
     });
     
     const { form: formData, enhance, message, delayed } = form;
+
+    $effect(() => { tipePenugasan; setTimeout(() => uploadedFiles = [], 0); });
 </script>
 
 <form method="POST" use:enhance class="grid gap-4" action="{action}" enctype="multipart/form-data">

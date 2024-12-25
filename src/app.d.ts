@@ -23,6 +23,12 @@ declare global {
         nama: string;
         role: "Admin" | "Guru" | "Siswa" | "Tata Usaha";
     }
+
+    interface FileData {
+        url: string;
+        name: string;
+        key: string
+    }
 }
 
 export {};
