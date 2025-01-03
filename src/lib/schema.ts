@@ -81,3 +81,9 @@ export const penugasanSchema = v.object({
 });
 
 export type PenugasanSchemaType = v.InferOutput<typeof penugasanSchema>
+
+export const joinClassroomSchema = v.object({
+	kodeKelas: v.pipe(v.string(), v.trim(), v.nonEmpty("Harap masukan kode kelas"))
+});
+
+export type JoinClassroomSchemaType = v.InferOutput<typeof joinClassroomSchema>;

@@ -19,7 +19,8 @@
         onRedirect?: () => void
     } = $props();
 
-    let uploadedFiles = $state<File[]>([]);
+    let uploadedFiles = $state<File[]>([]), 
+        isChanged = $state(false);
     
     const form = superForm(data, {
         validators: valibotClient(penugasanSchema),
@@ -37,6 +38,7 @@
         onSubmit(input) {
             uploadedFiles.forEach(v => input.formData.append("files", v));
         },
+        onChange: () => isChanged = true
     });
     
     const { form: formData, enhance, message, delayed } = form;
@@ -142,7 +144,7 @@
     </Form.Field>
     <div class="grid gap-2">
         {#if $message && !$message.success}<span class="text-red-500 text-sm">{ $message.text }</span>{/if}
-        <Form.Button class="w-full bg-blue-500 hover:bg-blue-700" disabled={$delayed}>
+        <Form.Button class="w-full bg-blue-500 hover:bg-blue-700" disabled={$delayed || !isChanged}>
             {#if $delayed}<Loading/>{:else}Simpan{/if}
         </Form.Button>
     </div>

@@ -4,11 +4,11 @@ import type { PageServerLoad } from './$types';
 import { loginSchema } from '$lib/schema';
 import { fail, redirect, type Actions } from '@sveltejs/kit';
 import { catchReject } from '$lib';
-import { and, db, eq, sql, tbAccount, tbAdmin, tbGuru, tbSiswa } from '$lib/server/database';
 import bcrypt from 'bcryptjs';
 import { createJwtSession } from '$lib/server/auth';
+import { sql } from '$lib/server/database';
 
-export const load: PageServerLoad = async ({ }) => {
+export const load: PageServerLoad = async () => {
     return {
         form: await superValidate(valibot(loginSchema))
     };
@@ -20,29 +20,26 @@ export const actions: Actions = {
         if (!form.valid) return fail(422, { form });
 
         const [result, error] = await catchReject(async () => {
-            return await db.select({
-                idPengguna: sql<number>`
-                    case
-                        when ${tbAccount.role} = 'Siswa' then ${tbSiswa.id}
-                        when ${tbAccount.role} = 'Guru' then ${tbGuru.id}
-                        else ${tbAdmin.id}
-                    end
-                `,
-                namaPengguna: sql<string>`
-                    case
-                        when ${tbAccount.role} = 'Siswa' then ${tbSiswa.nama}
-                        when ${tbAccount.role} = 'Guru' then ${tbGuru.nama}
-                        else ${tbAdmin.nama}
-                    end`,
-                role: tbAccount.role,
-                password: tbAccount.password
-            })
-            .from(tbAccount)
-            .leftJoin(tbSiswa, eq(tbAccount.id, tbSiswa.accountId))
-            .leftJoin(tbGuru, eq(tbAccount.id, tbGuru.accountId))
-            .leftJoin(tbAdmin, eq(tbAccount.id, tbAdmin.accountId))
-            .where(and(eq(tbAccount.nomorInduk, form.data.nomorInduk), eq(tbAccount.aktif, true)))
-            .limit(1);
+            return await sql`
+            select
+                tb_akun.role,
+                case
+                    when tb_akun.role = 'Siswa' then tb_siswa.id
+                    when tb_akun.role = 'Guru' then tb_guru.id
+                    else tb_tata_usaha.id
+                end as idPengguna,
+                case
+                    when tb_akun.role = 'Siswa' then tb_siswa.nama
+                    when tb_akun.role = 'Guru' then tb_guru.nama
+                    else tb_tata_usaha.nama
+                end as namaPengguna,
+                tb_akun.password
+            from tb_akun
+            left join tb_siswa on tb_akun.id = tb_siswa.id_akun
+            left join tb_guru on tb_akun.id = tb_guru.id_akun
+            left join tb_tata_usaha on tb_akun.id = tb_tata_usaha.id_akun
+            where tb_akun.nomor_induk = ${form.data.nomorInduk} and tb_akun.aktif = true
+            limit 1`;
         });
 
         if (error !== null) {
@@ -51,7 +48,6 @@ export const actions: Actions = {
         }
 
         if (result.length === 0) {
-            console.log("No result");
             return message(form, { success: false, text: "Nomor induk atau kata sandi salah" }, { status: 401 });
         }
 
@@ -61,7 +57,7 @@ export const actions: Actions = {
             return message(form, { success: false, text: "Nomor induk atau kata sandi salah" }, { status: 401 });
         }
 
-        await createJwtSession(cookies, { id: userData.idPengguna, role: userData.role, nama: userData.namaPengguna });
+        await createJwtSession(cookies, { id: userData.idpengguna, role: userData.role, nama: userData.namapengguna });
 
         throw redirect(303, "/elearning");
     }

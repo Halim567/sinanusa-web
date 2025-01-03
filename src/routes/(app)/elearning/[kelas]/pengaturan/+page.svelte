@@ -9,7 +9,7 @@
 </script>
 
 <div class="p-4 grid place-items-center">
-    {#if data.form && data.classroomData}
+    {#if data.form}
         <div class="w-1/3 grid gap-4">
             <FormCard/>
             <DetailUmumCard/>

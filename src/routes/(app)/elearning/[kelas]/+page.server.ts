@@ -1,52 +1,73 @@
-import { redirect } from '@sveltejs/kit';
+import { fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { catchReject } from '$lib';
-import { and, db, eq, tbAssignment, tbSubmission } from '$lib/server/database';
-import { getClassroomById } from '$lib/server/database/fetch';
+import { catchReject, parseQueryURL } from '$lib';
+import { sql } from '$lib/server/database';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
     if (!locals.user) throw redirect(303, '/login');
+	
+	const { id } = parseQueryURL(url.searchParams, { id: 0 });
+	
+    const result = async () => {
+        const [result, error] = await catchReject(async () => {
+            return await sql`
+                select
+                    tb_penugasan.id,
+                    tb_penugasan.id_kelas,
+                    tb_penugasan.judul as nama_penugasan,
+                    tb_penugasan.deskripsi,
+                    tb_penugasan.batas_pengumpulan,
+                    tb_penugasan.dibuat_pada,
+                    tb_penugasan.tipe_penugasan,
+                    tb_penugasan.file_lampiran,
 
-    const classroomId = url.searchParams.get("id");
-    if (classroomId === null) return { error: true };
+                    tb_pengumpulan.selesai,
+                    tb_pengumpulan.id as id_pengumpulan,
+                    tb_pengumpulan.terlambat,
+                    tb_pengumpulan.file_pengumpulan,
+                    tb_pengumpulan.id_siswa
+                from tb_penugasan
+                left join tb_pengumpulan on tb_penugasan.id = tb_pengumpulan.id_penugasan
+                where tb_penugasan.id_kelas in (
+                    select id from tb_kelas where id = ${id} and telah_dihapus = false limit 1
+                ) and tb_penugasan.telah_dihapus = false
+                order by tb_penugasan.dibuat_pada desc`;
+        });
 
-    const id = parseInt(classroomId);
-    if (isNaN(id)) return { error: true };
+        if (error !== null) {
+            console.error("[LOAD ASSIGNMENT] ERROR : ", error.message);
+            throw new Error("Terdapat kesalahan yang tidak terduga, coba lagi nanti");
+        }
 
-    const [result, error] = await catchReject(async () => await getClassroomById(id));
-    if (error !== null) {
-        console.error(`[Mengambil Kelas] ${error}`);
-        return { error: true };
-    }
+        return result;
+	}; 
 
-    if (result.length === 0) return { errorNotFound: true };
+    return { penugasan: result() };
+};
 
-    const [result1, error1] = await catchReject(async () => {
-        return await db
-            .select({
-                idPenugasan: tbAssignment.id,
-                classroomId: tbAssignment.classroomId,
-                namaPenugasan: tbAssignment.judul,
-                deskripsi: tbAssignment.deskripsi,
-                batasPengumpulan: tbAssignment.batasPengumpulan,
-                dibuatPada: tbAssignment.dibuatPada,
-                tipePenugasan: tbAssignment.tipeAssignment,
-                fileDatas: tbAssignment.fileDatas,
-                submissionSelesai: tbSubmission.selesai,
-                submissionId: tbSubmission.id,
-                submissionTerlambat: tbSubmission.terlambat,
-                submissionFileUrls: tbSubmission.fileUrls,
-                siswaId: tbSubmission.siswaId,
-            })
-            .from(tbAssignment)
-            .leftJoin(tbSubmission, eq(tbSubmission.assignmentId, tbAssignment.id))
-            .where(and(eq(tbAssignment.classroomId, result[0].id), eq(tbAssignment.deleted, false)))
-    });
+export const actions: Actions = {
+    ['hapus-penugasan']: async ({ locals, url }) => {
+        if (!locals.user) throw redirect(303, '/login');
 
-    if (error1 !== null) {
-        console.error(`[Mengambil Penugasan] ${error}`);
-        return { error: true };
-    }
+        if (locals.user.role !== "Guru") {
+            return fail(403, { success: false, text: "Anda tidak memiliki akses untuk menghapus penugasan" });
+        }
 
-    return { penugasan: result1 };
+        const { id } = parseQueryURL(url.searchParams, { id: 0 });
+
+        const [result, error] = await catchReject(async () => {
+            return await sql`
+                update tb_penugasan
+                set telah_dihapus = true
+                where id = ${id} and telah_dihapus = false
+                returning id`;
+        });
+
+        if (error !== null || result.length === 0) {
+            console.error("[DELETE ASSIGNMENT] ERROR : ", error?.message);
+            return fail(500, { success: false, text: "Terjadi kesalahan yang tidak terduga, coba lagi nanti" });
+        }
+
+        return { success: true, text: "Penugasan berhasil dihapus" };
+    },
 };

@@ -18,7 +18,6 @@
     let isChanged = $state(false);
     
     const form = superForm(data, { 
-        validators: valibotClient(classroomSchema),
         onUpdated({ form: { message } }) { 
             if (onSuccess && message && message.success) {
                 isChanged = false;
@@ -31,14 +30,15 @@
                 isChanged = false;
                 if (onRedirect) onRedirect();
             }
-        }
+        },
+        validators: valibotClient(classroomSchema),
     });
 
     const { form: formData, enhance, message, delayed } = form;
 </script>
 
 <form method="POST" use:enhance class="grid gap-4" action="{action}">
-    <Form.Field {form} name="namaKelas">
+	<Form.Field {form} name="namaKelas">
         <Form.Control>
             {#snippet children({ props })}
                 <Form.Label>Nama Kelas</Form.Label>

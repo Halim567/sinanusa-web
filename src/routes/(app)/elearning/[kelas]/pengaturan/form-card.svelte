@@ -13,7 +13,7 @@
     <Card.Content>
         <FormClassroom 
             data={page.data.form} 
-            action="/elearning?/update-classroom&id={page.data.classroomData.classroom_id}&url={page.data.pathname}"
+            action="/elearning?/update-classroom&id={page.data.classroomData.id}&url={page.url.pathname}"
             onRedirect={() => toast.success('Kelas berhasil diperbarui')}
         />
     </Card.Content>

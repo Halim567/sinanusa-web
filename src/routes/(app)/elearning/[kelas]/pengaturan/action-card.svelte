@@ -57,7 +57,7 @@
                     </AlertDialog.Header>
                     <AlertDialog.Footer>
                         <AlertDialog.Cancel>Batal</AlertDialog.Cancel>
-                        <form action="/elearning?/delete-classroom&id={page.data.classroomData.classroom_id}" method="POST" use:enhance={onSubmit}>
+                        <form action="/elearning?/delete-classroom&id={page.data.classroomData.id}" method="POST" use:enhance={onSubmit}>
                             <Button disabled={loading} type="submit" class="bg-red-500 hover:bg-red-700"><Trash2/> Hapus Kelas</Button>
                         </form>
                     </AlertDialog.Footer>

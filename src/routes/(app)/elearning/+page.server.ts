@@ -1,50 +1,51 @@
-import { catchReject } from '$lib';
-import { classroomSchema } from '$lib/schema';
-import { and, count, db, desc, eq, sql, tbAssignment, tbClassroom, tbClassroomSiswa, tbGuru, tbSiswa } from '$lib/server/database';
+import { catchReject, parseQueryURL } from '$lib';
+import { classroomSchema, joinClassroomSchema } from '$lib/schema';
 import { redirect, type Actions } from '@sveltejs/kit';
 import { fail, message, superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import crypto from "crypto";
 import type { PageServerLoad } from './$types';
-import { utapi } from '$lib/server/uploadthing';
+import { sql } from '$lib/server/database';
 
 export const load: PageServerLoad = async ({ locals }) => {
     if (!locals.user) throw redirect(303, '/login');
+	
+	const value = async () => {
+        const [result, error] = await catchReject(async () => {
+            return await sql`
+                select
+                    tb_kelas.id,
+                    tb_guru.nama as namaPengajar,
+                    tb_kelas.nama_kelas as namaKelas,
+                    tb_kelas.mata_pelajaran as mataPelajaran,
+                    tb_kelas.kelas,
+                    tb_kelas.kode,
+                    tb_kelas.dibuat_pada as dibuatPada,
+                    count(tb_kelas_siswa.id_siswa) as jumlahSiswa
+                from tb_kelas
+                full join tb_guru on tb_kelas.id_guru = tb_guru.id
+                left join tb_kelas_siswa on tb_kelas.id = tb_kelas_siswa.id_kelas
+                left join tb_siswa on tb_siswa.id = tb_kelas_siswa.id_siswa
+                where
+                    case
+                        when ${locals.user!.role} = 'Guru' then tb_kelas.id_guru = ${locals.user!.id}
+                        when ${locals.user!.role} = 'Siswa' then tb_kelas.id in (select id_kelas from tb_kelas_siswa where id_siswa = ${locals.user!.id})
+                        else 1 = 1
+                    end
+                    and tb_kelas.telah_dihapus = false
+                group by tb_kelas.id, tb_guru.nama, tb_kelas.nama_kelas, tb_kelas.kode, tb_kelas.dibuat_pada
+                order by tb_kelas.dibuat_pada desc`;
+        });
 
-    const { user } = locals;
-    const [result, error] = await catchReject(async () => {
-        return await db.select({
-                classroom_id: tbClassroom.id,
-                nama_pengajar: tbGuru.nama,
-                judul_classroom: tbClassroom.namaKelas,
-                mata_pelajaran: tbClassroom.mataPelajaran,
-                kelas: tbClassroom.kelas,
-                kode: tbClassroom.kode,
-                dibuat_pada: tbClassroom.dibuatPada,
-                jumlah_siswa: count(tbClassroomSiswa.siswaId)
-            })
-            .from(tbClassroom)
-            .fullJoin(tbGuru, eq(tbClassroom.guruId, tbGuru.id))
-            .leftJoin(tbClassroomSiswa, eq(tbClassroom.id, tbClassroomSiswa.classroomId))
-            .leftJoin(tbSiswa, eq(tbSiswa.id, tbClassroomSiswa.siswaId))
-            .where(and(sql`
-                case
-                    when ${user.role} = 'Guru' then tb_classroom.guru_id = ${user.id}
-                    when ${user.role} = 'Siswa' then tb_classroom.id in (select classroom_id from tb_classroom_siswa where siswa_id = ${user.id})
-                    else 1 = 1
-                end`,
-                eq(tbClassroom.deleted, false)
-            ))
-            .groupBy(tbClassroom.id, tbGuru.nama, tbClassroom.namaKelas, tbClassroom.kode)
-            .orderBy(desc(tbClassroom.dibuatPada))
-    });
+        if (error !== null) {
+            console.error("[LOAD CLASSROOM] ERROR : ", error.message);
+            throw new Error("Terdapat kesalahan yang tidak terduga, coba lagi nanti");
+        }
 
-    if (error !== null) {
-        console.error(error);
-        return { error: "Gagal mengambil data kelas" };
-    }
+        return result;
+    };
 
-    return { classroomData: result };
+    return { dataKelas: value() };
 };
 
 export const actions: Actions = {
@@ -53,25 +54,27 @@ export const actions: Actions = {
 
         const form = await superValidate(request, valibot(classroomSchema));
 
-        if (locals.user.role !== "Guru") 
+        if (locals.user.role !== "Guru") {
             return message(form, { success: false, text: "Gagal membuat kelas, anda tidak memiliki akses untuk membuat kelas" }, { status: 403 });
+        }
 
         if (!form.valid) return fail(422, { form });
 
         const [result, error] = await catchReject(async () => {
-            return await db.insert(tbClassroom)
-                .values({
-                    guruId: locals.user!.id,
-                    namaKelas: form.data.namaKelas,
-                    mataPelajaran: form.data.mataPelajaran,
-                    kelas: form.data.kelas,
-                    kode: crypto.randomBytes(4).toString("hex").toUpperCase()
-                })
-                .returning({ id: tbClassroom.id });
+            return await sql`
+                insert into tb_kelas (id_guru, nama_kelas, mata_pelajaran, kelas, kode)
+                values (
+                    ${locals.user!.id},
+                    ${form.data.namaKelas},
+                    ${form.data.mataPelajaran},
+                    ${form.data.kelas},
+                    ${crypto.randomBytes(4).toString("hex").toUpperCase()}
+                )
+                returning id`;
         });
 
-        if (error != null || result.length === 0) {
-            console.error(error);
+        if (error !== null || result.length === 0) {
+            console.error("[CREATE CLASSROOM] ERROR : ", error?.message);
             return message(form, { success: false, text: "Gagal membuat kelas" }, { status: 500 });
         }
 
@@ -81,87 +84,93 @@ export const actions: Actions = {
         if (!locals.user) throw redirect(303, '/login');
 
         const form = await superValidate(request, valibot(classroomSchema));
-        const classroomId = parseInt(url.searchParams.get("id") ?? "");
-        if (isNaN(classroomId)) return message(form, { success: false, text: "Gagal mengubah kelas, id kelas tidak valid" }, { status: 400 });
+        const { id } = parseQueryURL(url.searchParams, { id: 0 });
 
-        if (locals.user.role !== "Guru") 
-            return message(form, { success: false, text: "Gagal mengubah kelas, anda tidak memiliki akses untuk mengubah kelas" }, { status: 403 });
+        if (locals.user.role !== "Guru") {
+           return message(form, { success: false, text: "Gagal mengubah kelas, anda tidak memiliki akses untuk mengubah kelas" }, { status: 403 });
+        }
 
         if (!form.valid) return fail(422, { form });
 
         const [result, error] = await catchReject(async () => {
-            return await db
-                .update(tbClassroom)
-                .set({
-                    namaKelas: form.data.namaKelas,
-                    mataPelajaran: form.data.mataPelajaran,
-                    kelas: form.data.kelas
-                })
-                .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)))
-                .returning({ 
-                    id: tbClassroom.id,
-                    namaKelas: tbClassroom.namaKelas 
-                });
+            return await sql`
+                update tb_kelas
+                set
+                    nama_kelas = ${form.data.namaKelas},
+                    mata_pelajaran = ${form.data.mataPelajaran},
+                    kelas = ${form.data.kelas}
+                where id = ${id} and id_guru = ${locals.user!.id} and telah_dihapus = false
+                returning id, nama_kelas`;
         });
 
-        if (error != null || result.length === 0) {
-            console.error(error);
-            return message(form, { success: false, text: "Gagal mengubah kelas" }, { status: 500 });
+        if (error !== null || result.length === 0) {
+           console.error("[UPDATE CLASSROOM] ERROR : ", error?.message);
+           return message(form, { success: false, text: "Gagal mengubah kelas" }, { status: 500 });
         }
 
-        throw redirect(303, `/elearning/${result[0].namaKelas}/pengaturan?id=${result[0].id}`);
+        throw redirect(303, `/elearning/${result[0].nama_kelas}/pengaturan?id=${result[0].id}`);
     },
     ['delete-classroom']: async ({ locals, url }) => {
         if (!locals.user) throw redirect(303, '/login');
 
-        const classroomId = parseInt(url.searchParams.get("id") ?? "");
-        if (isNaN(classroomId)) return fail(400, { success: false, error: "Gagal menghapus kelas, id kelas tidak valid" });
+        const { id: classroomId } = parseQueryURL(url.searchParams, { id: 0 });
+
+        if (locals.user.role !== "Guru") {
+            return fail(403, { success: false, text: "Anda tidak memiliki akses untuk menghapus kelas" });
+        }
 
         const [result, error] = await catchReject(async () => {
-            return await db
-                .select({
-                    id: tbClassroom.id,
-                    guruId: tbClassroom.guruId,
-                    fileDatas: tbAssignment.fileDatas
-                })
-                .from(tbClassroom)
-                .leftJoin(tbAssignment, eq(tbClassroom.id, tbAssignment.classroomId))
-                .where(and(eq(tbClassroom.id, classroomId), eq(tbClassroom.guruId, locals.user!.id), eq(tbClassroom.deleted, false)));
+            return await sql`
+                update tb_kelas
+                set telah_dihapus = true
+                where id = ${classroomId} and id_guru = ${locals.user!.id} and telah_dihapus = false
+                returning id`;
         });
 
         if (error !== null || result.length === 0) {
-            console.error("Error: ", error);
-            return fail(500, { success: false, error: "Gagal menghapus kelas" });
+            console.error("[DELETE CLASSROOM] ERROR : ", error?.message);
+            return fail(500, { success: false, text: "Gagal menghapus kelas, coba lagi nanti" });
         }
 
-        const { id, guruId, fileDatas } = result[0];
-        if (fileDatas !== null) {
-            for (const file of fileDatas as { url: string; name: string, key: string }[]) {
-                const result = await utapi.deleteFiles(file.key);
+        throw redirect(303, "/elearning");
+    },
+	['join-classroom']: async ({ request, locals }) => {
+		if (!locals.user) throw redirect(303, "/login");
 
-                if (!result.success) {
-                    console.error("[DELETE CLASSROOM] Gagal menghapus file");
-                    return fail(500, { success: false, error: "Gagal menghapus kelas" });
-                }
-            }
-        }
+		const form = await superValidate(request, valibot(joinClassroomSchema));
 
-        const [result1, error1] = await catchReject(async () => {
-            return await db
-                .delete(tbClassroom)
-                .where(and(eq(tbClassroom.id, id), eq(tbClassroom.guruId, guruId)))
-                .returning({ id: tbClassroom.id });
+		if (locals.user.role !== "Siswa") {
+			return message(form, { success: false, text: "Hanya siswa yang dapat join ke kelas" }, { status: 403 });
+		}
+
+		if (!form.valid) {
+			return fail(422, { form });
+		}
+
+        const [result, error] = await catchReject(async () => {
+            return await sql`
+                insert into tb_kelas_siswa (id_kelas, id_siswa)
+                select tb_kelas.id, ${locals.user!.id}
+                from tb_kelas
+                where tb_kelas.kode = ${form.data.kodeKelas} and tb_kelas.telah_dihapus = false
+                returning id_kelas`;
         });
 
-        if (error1 !== null || result1.length === 0) {
-            console.error("Error: ", error);
-            return fail(500, { success: false, error: "Gagal menghapus kelas" });
+        if (error !== null) {
+            if (error.message === 'duplicate key value violates unique constraint "tb_kelas_siswa_id_kelas_unique"') {
+                return message(form, { success: false, text: "Anda sudah mengikuti kelas tersebut" }, { status: 400 });
+            }
+
+            console.error(error.message);
+            return message(form, { success: false, text: "Terdapat Kesalahan yang tidak terduga, coba lagi nanti" }, { status: 500 });
         }
 
-        throw redirect(303, '/elearning');
-    }
-};
+        console.log(result);
 
-// http://localhost:5173/elearning/test?id=28
-// http://localhost:5173/elearning/test/buat?id=28&tipe=Tugas
-// http://localhost:5173/elearning/test/pengaturan?id=28
+        if (result.length === 0) {
+            return message(form, { success: false, text: `Kelas untuk kode "${form.data.kodeKelas}" tidak ditemukan atau mungkin sudah dihapus` }, { status: 404 });
+        }
+
+		return message(form, { success: true, text: "Berhasil join kelas" });
+	}
+};

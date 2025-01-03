@@ -5,41 +5,25 @@ import { penugasanSchema } from '$lib/schema';
 import { valibot } from "sveltekit-superforms/adapters";
 import type { Actions } from '@sveltejs/kit';
 import { utapi } from '$lib/server/uploadthing';
-import { catchReject } from '$lib';
-import { db, tbAssignment } from '$lib/server/database';
-import { getClassroomById } from '$lib/server/database/fetch';
+import { catchReject, parseQueryURL } from '$lib';
+import { sql } from '$lib/server/database';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
     if (!locals.user) throw redirect(303, "/login");
 
-    const tipePenugasan = url.searchParams.get("tipe");
+    const { id: classroomId, tipe: tipePenugasan } = parseQueryURL(url.searchParams, { id: 0, tipe: "" });
+    if (classroomId === 0 || (tipePenugasan !== "Tugas" && tipePenugasan !== "Materi")) {
+		return { error: true };
+	}
 
-    if (tipePenugasan === null) {
-        console.error("[BUAT ASSIGNMENT] Tipe assignment tidak ditemukan di url query");
+    const [result, error] = await catchReject(async () => {
+        return await sql`
+            select tb_kelas.id from tb_kelas 
+            where tb_kelas.id = ${classroomId} and tb_kelas.telah_dihapus = false limit 1`;
+    });
+
+    if (error !== null || result.length === 0) {
         return { error: true };
-    }
-
-    const idQuery = url.searchParams.get("id");
-    if (idQuery === null) {
-        console.error("[BUAT ASSIGNMENT] ID kelas tidak ditemukan di url query");
-        return { error: true };
-    }
-
-    const classroomId = parseInt(idQuery);
-    if (isNaN(classroomId)) {
-        console.error("[BUAT ASSIGNMENT] ID kelas tidak valid");
-        return { error: true };
-    }
-
-    const [result, error] = await catchReject(async () => await getClassroomById(classroomId));
-
-    if (error !== null) {
-        console.error(`[BUAT ASSIGNMENT] ${error}`);
-        return { error: true };
-    }
-
-    if (result.length === 0) {
-        return { errorNotFound: true };
     }
 
     return {
@@ -57,79 +41,62 @@ export const actions: Actions = {
             return message(form, { success: false, text: "Gagal membuat penugasan, Anda tidak memiliki izin untuk membuat penugasan" }, { status: 403 });
         }
 
-        const idQuery = url.searchParams.get("classroomId");
-        const tipePenugasan = url.searchParams.get("tipe");
-
-        if (idQuery === null) {
-            return message(form, { success: false, text: "Gagal membuat penugasan, ID kelas tidak ditemukan" }, { status: 400 });
-        }
-
-        if (tipePenugasan === null || tipePenugasan !== "Tugas" && tipePenugasan !== "Ujian" && tipePenugasan !== "Materi") {
-            return message(form, { success: false, text: "Gagal membuat penugasan, tipe penugasan tidak valid" }, { status: 400 });
-        }
-
-        const classroomId = parseInt(idQuery);
-        if (isNaN(classroomId)) {
-            return message(form, { success: false, text: "Gagal membuat penugasan, ID kelas tidak valid" }, { status: 400 });
-        }
-
-        if (!form.valid) {
+        const { tipe: tipePenugasan, classroomId } = parseQueryURL(url.searchParams, { tipe: "", classroomId: 0 });
+        if (!form.valid || tipePenugasan !== "Tugas" && tipePenugasan !== "Ujian" && tipePenugasan !== "Materi") {
             return fail(422, { form });
         }
 
         let deadline: string | null = null;
-
         if (form.data.batasPengumpulan !== undefined) {
             const newDate = new Date(form.data.batasPengumpulan);
-            if (!isNaN(newDate.getTime())) {
-                deadline = newDate.toISOString();
-            } else {
+            if (isNaN(newDate.getTime())) {
                 return setError(form, "batasPengumpulan", "Tanggal batas pengumpulan tidak valid");
-            }
+			}
+
+			deadline = newDate.toISOString();
         }
         
-        let fileDatas: { url: string; name: string, key: string }[] = [];
+        let fileLampiran: { url: string; name: string, key: string, size: number }[] = [];
         if (form.data.files !== undefined) {
             const result = await utapi.uploadFiles(form.data.files);
 
-            for (let i = 0; i < result.length; i++) {
-                if (result[i].error !== null) {
-                    console.error("[BUAT ASSIGNMENT] Gagal mengupload file", result[i].error);
+            for (const res of result) {
+                if (res.error !== null) {
+                    console.error("[BUAT ASSIGNMENT] Gagal mengupload file", res.error);
                     return message(form, { success: false, text: "Gagal mengupload file" }, { status: 500 });
                 }
-                
-                fileDatas.push({ url: result[i].data!.url, name: result[i].data!.name, key: result[i].data!.key });
+
+                const data = res.data;
+                fileLampiran.push({ ...data });
             }
         }
 
         const [result, error] = await catchReject(async () => {
-            return await db
-                .insert(tbAssignment)
-                .values({
-                    judul: form.data.namaPenugasan,
-                    tipeAssignment: tipePenugasan,
-                    classroomId,
-                    batasPengumpulan: deadline,
-                    deskripsi: form.data.deskripsi,
-                    fileDatas: fileDatas.length > 0 ? fileDatas : null,
-                })
-                .returning({
-                    id: tbAssignment.id,
-                    classroomId: tbAssignment.classroomId,
-                });
+            return await sql`
+                insert into tb_penugasan (
+                    id_kelas,
+                    judul,
+                    deskripsi,
+                    batas_pengumpulan,
+                    tipe_penugasan,
+                    file_lampiran
+                ) values (
+                    (select id from tb_kelas where id = ${classroomId} and telah_dihapus = false limit 1),
+                    ${form.data.namaPenugasan},
+                    ${form.data.deskripsi},
+                    ${deadline},
+                    ${tipePenugasan},
+                    ${fileLampiran}
+                )
+                returning id, (select nama_kelas from tb_kelas where id = ${classroomId} limit 1) as nama_kelas`;
         });
 
         if (error !== null || result.length === 0) {
-            console.error("[BUAT ASSIGNMENT] Gagal membuat penugasan", error);
-            const result = await utapi.deleteFiles(fileDatas.map(file => file.key));
-
-            if (!result.success) {
-                console.error("[BUAT ASSIGNMENT] Gagal menghapus file yang sudah diupload");
-            }
-
-            return message(form, { success: false, text: "Gagal membuat penugasan, silakan coba lagi nanti" }, { status: 500 });
+            console.error("[CREATE ASSIGNMENT] ERROR : ", error?.message);
+            return message(form, { success: false, text: "Gagal membuat penugasan" }, { status: 500 });
         }
-
-        throw redirect(303, `/elearning/${url.pathname.split("/")[2]}?id=${classroomId}`);
+		
+        console.log(result);
+        throw redirect(303, `/elearning/${result[0].nama_kelas}?id=${classroomId}`);
     }
 };

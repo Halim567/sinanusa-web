@@ -1,7 +1,7 @@
 import { superValidate } from 'sveltekit-superforms';
 import type { LayoutServerLoad } from './$types';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { classroomSchema } from '$lib/schema';
+import { classroomSchema, joinClassroomSchema } from '$lib/schema';
 import { redirect } from '@sveltejs/kit';
 
 export const load: LayoutServerLoad = async ({ url, locals }) => {
@@ -11,6 +11,7 @@ export const load: LayoutServerLoad = async ({ url, locals }) => {
         path: url.pathname, 
         params: url.searchParams.get("id"), 
         user: locals.user, 
-        form: await superValidate(valibot(classroomSchema)) 
-    };
+        classroomForm: await superValidate(valibot(classroomSchema)),
+		joinClassroomForm: await superValidate(valibot(joinClassroomSchema))
+	};
 };

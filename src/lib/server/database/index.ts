@@ -1,7 +1,4 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import * as schema from "./schema";
 import { env } from "$env/dynamic/private";
+import { neon } from "@neondatabase/serverless";
 
-export const db = drizzle(env.DATABASE_URL!, { schema });
-export * from "./schema";
-export { eq, and, count, not, or, sql, desc } from "drizzle-orm";
+export const sql = neon(env.DATABASE_URL);

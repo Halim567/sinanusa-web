@@ -2,21 +2,18 @@
     import * as Form from '$lib/components/ui/form';
     import { Input } from '$lib/components/ui/input';
     import * as Card from '$lib/components/ui/card';
+    import Loading from '$lib/components/ui/loading/loading.svelte';
+    import { Background, Logo } from '$lib/images';
 
     import { loginSchema } from '$lib/schema';
     import { valibotClient } from 'sveltekit-superforms/adapters';
     import type { PageData } from './$types';
     import { superForm } from 'sveltekit-superforms';
-    import { Background, Logo } from '$lib/images';
-    import Loading from '$lib/components/ui/loading/loading.svelte';
 
     const { data }: { data: PageData } = $props();
 
     const form = superForm(data.form, { 
         validators: valibotClient(loginSchema),
-        onUpdate({ form }) {
-            console.log(form.message);
-        }
     });
 
     const { form: formData, enhance, message, delayed } = form;
@@ -64,4 +61,3 @@
         </Card.Root>
     </div>
 </div>
-

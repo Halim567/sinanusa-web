@@ -11,6 +11,7 @@
     import { toast } from 'svelte-sonner';
     import type { Snippet } from 'svelte';
     import type { LayoutData } from './$types';
+    import FormJoinClassroom from '$lib/components/not-reuseable/form-join-classroom.svelte';
 
     const { data, children }: { data: LayoutData, children: Snippet } = $props();
 
@@ -48,17 +49,36 @@
                         </Dialog.Trigger>
                         <Dialog.Content>
                             <Dialog.Header class="items-start text-start">
-                                <Dialog.Title>Tambah Classroom</Dialog.Title>
+                                <Dialog.Title>
+									{#if data.user?.role === "Guru"}
+										Tambah Classroom
+									{:else if data.user?.role === "Siswa"}
+										Join Classroom
+									{/if}
+								</Dialog.Title>
                                 <Dialog.Description>
-                                    Masukan nama ruang kelas, pilih kelas, dan mata pelajaran yang akan diajarkan.
+									{#if data.user?.role === "Guru"}
+										Masukan nama ruang kelas, pilih kelas, dan mata pelajaran yang akan diajarkan.
+									{:else if data.user?.role === "Siswa"}
+										Masukan kode kelas yang dishare oleh bapak/ibu guru mu.	
+									{/if}
                                 </Dialog.Description>
                             </Dialog.Header>
-                            <FormClassroom data={data.form} action="/elearning?/create-classroom" onSuccess={() => { 
-                                openDialog = false;
-                                toast.success("Kelas berhasil dibuat", {
-                                    description: "Anda dapat menshare kode kelas kepada siswa anda untuk bergabung.",
-                                });
-                            }}/>
+							{#if data.user?.role === "Guru"}
+								<FormClassroom data={data.classroomForm} action="/elearning?/create-classroom" onSuccess={() => { 
+									openDialog = false;
+									toast.success("Kelas berhasil dibuat", {
+										description: "Anda dapat menshare kode kelas kepada siswa anda untuk bergabung.",
+									});
+								}}/>
+							{:else if data.user?.role === "Siswa"}
+								<FormJoinClassroom data={data.joinClassroomForm} action="/elearning?/join-classroom" onSuccess={() => {
+									openDialog = false;
+									toast.success("Berhasil join kelas", {
+										description: "Anda mengklik kelas dan mengikuti penugasan yang ada dikelas tersebut"
+									});
+								}}/>
+							{/if}
                         </Dialog.Content>
                     </Dialog.Root>
                     <Separator orientation="vertical" class="h-8 bg-gray-300 hidden lg:block"/>

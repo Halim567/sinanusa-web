@@ -21,7 +21,7 @@
                 <small class="flex items-center justify-between">Dibuat pada<span class="text-gray-500 font-normal">{formatInTimeZone(new Date(page.data.classroomData.dibuat_pada!), 'Asia/Jakarta', "yyyy-MM-dd, 'Pukul' HH:mm 'WIB'")}</span></small>
                 <small class="flex items-center justify-between">Kode kelas<span class="text-gray-500 font-normal">{page.data.classroomData.kode}</span></small>
                 <small class="flex items-center justify-between">Jumlah Siswa<span class="text-gray-500 font-normal">{page.data.classroomData.jumlah_siswa}</span></small>
-                <small class="flex items-center justify-between">Nama Pengajar<span class="text-gray-500 font-normal">{page.data.classroomData.nama_pengajar}</span></small>
+                <small class="flex items-center justify-between">Nama Pengajar<span class="text-gray-500 font-normal">{page.data.classroomData.nama}</span></small>
             </div>
             <small class="flex items-center justify-between">
                 Tampilkan Kode kelas
@@ -35,7 +35,7 @@
                         </Dialog.Header>
                         <h1 class="font-bold text-5xl text-center my-12">{page.data.classroomData.kode}</h1>
                         <div class="flex items-center justify-between">
-                            <small>{page.data.classroomData.judul_classroom}</small>
+                            <small>{page.data.classroomData.nama_kelas}</small>
                             <Button onclick={() => { 
                                 navigator.clipboard.writeText(page.data.classroomData.kode!);
                                 toast.success('Kode kelas berhasil disalin');
